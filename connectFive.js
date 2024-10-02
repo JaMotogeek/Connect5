@@ -8,28 +8,25 @@ function Square({ value, onSquareClick }) {
   );
 }
 
-function Board({ xIsNext, squares, onPlay }) {
+function Board({ xIsNext, squares, onPlay, zIndex }) {
   function handleClick(i) {
-    if (calculateWinner(squares) || squares[i]) {
+    if (calculateWinner(squares) || squares[zIndex * 25 + i]) {
       return;
     }
     const nextSquares = squares.slice();
-    nextSquares[i] = xIsNext ? 'X' : 'O';
+    nextSquares[zIndex * 25 + i] = xIsNext ? 'X' : 'O';
     onPlay(nextSquares);
   }
 
-  const winner = calculateWinner(squares);
-  let status = winner ? 'Winner: ' + winner : 'Next player: ' + (xIsNext ? 'X' : 'O');
-
   return (
     <>
-      <div className="status">{status}</div>
+      <div className="status">Layer {zIndex + 1}</div>
       {Array.from({ length: 5 }).map((_, row) => (
         <div className="board-row" key={row}>
           {Array.from({ length: 5 }).map((_, col) => (
             <Square
               key={col}
-              value={squares[row * 5 + col]}
+              value={squares[zIndex * 25 + row * 5 + col]}
               onSquareClick={() => handleClick(row * 5 + col)}
             />
           ))}
@@ -40,7 +37,7 @@ function Board({ xIsNext, squares, onPlay }) {
 }
 
 export default function Game() {
-  const [history, setHistory] = useState([Array(25).fill(null)]);
+  const [history, setHistory] = useState([Array(125).fill(null)]);
   const [currentMove, setCurrentMove] = useState(0);
   const xIsNext = currentMove % 2 === 0;
   const currentSquares = history[currentMove];
@@ -67,7 +64,15 @@ export default function Game() {
   return (
     <div className="game">
       <div className="game-board">
-        <Board xIsNext={xIsNext} squares={currentSquares} onPlay={handlePlay} />
+        {Array.from({ length: 5 }).map((_, zIndex) => (
+          <Board
+            key={zIndex}
+            xIsNext={xIsNext}
+            squares={currentSquares}
+            onPlay={handlePlay}
+            zIndex={zIndex}
+          />
+        ))}
       </div>
       <div className="game-info">
         <ol>{moves}</ol>
@@ -79,18 +84,57 @@ export default function Game() {
 function calculateWinner(squares) {
   const lines = [];
 
-  // Horizontal and vertical lines
-  for (let i = 0; i < 5; i++) {
-    for (let j = 0; j < 5; j++) {
-      if (j <= 1) {
-        lines.push([i * 5 + j, i * 5 + j + 1, i * 5 + j + 2, i * 5 + j + 3, i * 5 + j + 4]); // horizontal
-      }
-      if (i <= 1) {
-        lines.push([i * 5 + j, (i + 1) * 5 + j, (i + 2) * 5 + j, (i + 3) * 5 + j, (i + 4) * 5 + j]); // vertical
-      }
-      if (i <= 1 && j <= 1) {
-        lines.push([i * 5 + j, (i + 1) * 5 + (j + 1), (i + 2) * 5 + (j + 2), (i + 3) * 5 + (j + 3), (i + 4) * 5 + (j + 4)]); // diagonal \
-        lines.push([i * 5 + (4 - j), (i + 1) * 5 + (3 - j), (i + 2) * 5 + (2 - j), (i + 3) * 5 + (1 - j), (i + 4) * 5 + (0 - j)]); // diagonal /
+  // Add 3D lines (horizontal, vertical, depth, and diagonals) to the lines array
+  for (let z = 0; z < 5; z++) {
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        // Horizontal lines
+        if (col <= 1) {
+          lines.push([
+            z * 25 + row * 5 + col,
+            z * 25 + row * 5 + (col + 1),
+            z * 25 + row * 5 + (col + 2),
+            z * 25 + row * 5 + (col + 3),
+            z * 25 + row * 5 + (col + 4),
+          ]);
+        }
+        // Vertical lines
+        if (row <= 1) {
+          lines.push([
+            z * 25 + row * 5 + col,
+            z * 25 + (row + 1) * 5 + col,
+            z * 25 + (row + 2) * 5 + col,
+            z * 25 + (row + 3) * 5 + col,
+            z * 25 + (row + 4) * 5 + col,
+          ]);
+        }
+        // Depth lines
+        if (z <= 1) {
+          lines.push([
+            z * 25 + row * 5 + col,
+            (z + 1) * 25 + row * 5 + col,
+            (z + 2) * 25 + row * 5 + col,
+            (z + 3) * 25 + row * 5 + col,
+            (z + 4) * 25 + row * 5 + col,
+          ]);
+        }
+        // Diagonal lines in various directions (e.g., 3D diagonals)
+        if (z <= 1 && row <= 1 && col <= 1) {
+          lines.push([
+            z * 25 + row * 5 + col,
+            (z + 1) * 25 + (row + 1) * 5 + (col + 1),
+            (z + 2) * 25 + (row + 2) * 5 + (col + 2),
+            (z + 3) * 25 + (row + 3) * 5 + (col + 3),
+            (z + 4) * 25 + (row + 4) * 5 + (col + 4),
+          ]);
+          lines.push([
+            z * 25 + row * 5 + (4 - col),
+            (z + 1) * 25 + (row + 1) * 5 + (3 - col),
+            (z + 2) * 25 + (row + 2) * 5 + (2 - col),
+            (z + 3) * 25 + (row + 3) * 5 + (1 - col),
+            (z + 4) * 25 + (row + 4) * 5 + (0 - col),
+          ]);
+        }
       }
     }
   }
